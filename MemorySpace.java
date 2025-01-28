@@ -4,6 +4,20 @@
  * used, respectively, for creating new blocks and recycling existing blocks.
  */
 public class MemorySpace {
+	public static void main(String[] args) {
+		MemorySpace memorySpace = new MemorySpace(100);
+		int address = memorySpace.malloc(5);
+		int address1 = memorySpace.malloc(20);
+		int address2 = memorySpace.malloc(20);
+		int address3 = memorySpace.malloc(55);
+		memorySpace.free(address);
+		memorySpace.free(address2);
+		memorySpace.defrag();
+		System.out.println(memorySpace);
+		memorySpace.free(address1);
+		memorySpace.defrag();
+		System.out.println(memorySpace);
+	}
 	
 	// A list of the memory blocks that are presently allocated
 	private LinkedList allocatedList;
@@ -57,9 +71,26 @@ public class MemorySpace {
 	 *        the length (in words) of the memory block that has to be allocated
 	 * @return the base address of the allocated block, or -1 if unable to allocate
 	 */
-	public int malloc(int length) {		
-		//// Replace the following statement with your code
-		return -1;
+	public int malloc(int length) {
+		Node p = freeList.getFirst();
+		while ( p!= null ) {
+			if (p.block.length >= length) {
+				break;
+			}
+			p = p.next;
+		}
+		if (p == null){
+			return -1;
+		}
+		MemoryBlock b = new MemoryBlock(p.block.baseAddress ,length);
+		allocatedList.addLast(b);
+		if (p.block.length == length) {
+			freeList.remove(p);
+			return b.baseAddress;
+		}
+		p.block.baseAddress = b.baseAddress + length;
+		p.block.length = p.block.length - length;
+		return b.baseAddress;
 	}
 
 	/**
@@ -67,11 +98,26 @@ public class MemorySpace {
 	 * This implementation deletes the block whose base address equals the given 
 	 * address from the allocatedList, and adds it at the end of the free list. 
 	 * 
-	 * @param baseAddress
+	 * @param address
 	 *            the starting address of the block to freeList
 	 */
 	public void free(int address) {
-		//// Write your code here
+		if (allocatedList.getSize() == 0) {
+			throw new IllegalArgumentException(
+					"index must be between 0 and size");
+		}
+		Node p = allocatedList.getFirst();
+		while ( p!= null ) {
+			if (p.block.baseAddress == address) {
+				break;
+			}
+			p = p.next;
+		}
+		if (p == null) {
+			return;
+		}
+		freeList.addLast(p.block);
+		allocatedList.remove(p.block);
 	}
 	
 	/**
@@ -89,6 +135,26 @@ public class MemorySpace {
 	 */
 	public void defrag() {
 		/// TODO: Implement defrag test
-		//// Write your code here
+		if (freeList.getSize() == 1 || freeList.getSize() == 0) {
+			return;
+		}
+		Node p = freeList.getFirst();
+		Node p1 = freeList.getFirst().next;
+		while (p != null) {
+			while (p1 != null ) {
+				if (p.block.baseAddress + p.block.length == p1.block.baseAddress) {
+					p.block.length += p1.block.length;
+					freeList.remove(p1);
+					p1 = p;
+				}
+				else if (p1.block.baseAddress + p1.block.length == p.block.baseAddress) {
+					p1.block.length += p.block.length;
+					freeList.remove(p);
+					p = p1;
+				}
+				p1 = p1.next;
+			}
+			p = p.next;
+		}
 	}
 }
